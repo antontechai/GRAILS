@@ -4,3 +4,5 @@ pandas
 python-multipart
 streamlit
 requests
+statsmodels
+plotly

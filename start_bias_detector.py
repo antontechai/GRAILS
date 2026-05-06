@@ -931,9 +931,3 @@ with st.expander("Model 1 summary"):
 
 with st.expander("Model 2 summary"):
     st.text(model_2.summary())
-
-
-# Show ignored ID columns
-if len(id_columns) > 0:
-    with st.expander("Ignored ID columns"):
-        st.write(id_columns)

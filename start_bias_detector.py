@@ -381,14 +381,46 @@ def calculate_bias_table(original_rows, predictions, bias_col):
 
     bias_table = (
         temp.groupby(bias_col, dropna=False)["prediction"]
-        .mean()
+        .agg(["mean", "std", "count"])
         .reset_index()
     )
 
-    bias_table.columns = ["Category", "Predicted approval rate"]
+    bias_table.columns = ["Category", "Predicted approval rate", "Prediction std", "Group size"]
+
+    bias_table["Prediction std"] = bias_table["Prediction std"].fillna(0)
 
     return bias_table
 
+# Function to add bias classification function
+def classify_bias(difference_pp, threshold_pp):
+    abs_diff = abs(difference_pp)
+
+    if abs_diff <= threshold_pp:
+        return "Not biased"
+    elif abs_diff <= 2 * threshold_pp:
+        return "Borderline"
+    else:
+        return "Biased"
+
+def calculate_dynamic_threshold(std_1, n_1, std_2, n_2, min_floor_pp=3.0, z=1.96):
+    """
+    Computes a dynamic threshold in percentage points for the difference
+    between two group mean predicted approval rates.
+
+    std_1, std_2 are standard deviations of predictions (0 to 1 scale)
+    n_1, n_2 are group sizes
+    min_floor_pp is the minimum threshold in percentage points
+    """
+    if n_1 <= 0 or n_2 <= 0:
+        return min_floor_pp
+
+    se_diff = np.sqrt((std_1 ** 2) / n_1 + (std_2 ** 2) / n_2)
+
+    # convert from probability scale to percentage points
+    threshold_pp = z * se_diff * 100
+
+    # enforce a minimum practical threshold
+    return max(min_floor_pp, threshold_pp)
 
 # Function to show note under charts
 # Explains missing categories clearly
@@ -845,19 +877,44 @@ comparison["Difference"] = (
 
 comparison["Difference_percentage_points"] = comparison["Difference"] * 100
 
+comparison["Dynamic_threshold_pp"] = comparison.apply(
+    lambda row: calculate_dynamic_threshold(
+        std_1=row["Prediction std_Model1"],
+        n_1=row["Group size_Model1"],
+        std_2=row["Prediction std_Model2"],
+        n_2=row["Group size_Model2"],
+        min_floor_pp=3.0
+    ),
+    axis=1
+)
+
+comparison["Bias_flag"] = comparison.apply(
+    lambda row: classify_bias(
+        difference_pp=row["Difference_percentage_points"],
+        threshold_pp=row["Dynamic_threshold_pp"]
+    ),
+    axis=1
+)
+
+comparison["Difference_percentage_points"] = comparison["Difference"] * 100
+
 comparison_show = comparison.copy()
+
 comparison_show["Predicted approval rate_Model1"] = comparison_show["Predicted approval rate_Model1"] * 100
 comparison_show["Predicted approval rate_Model2"] = comparison_show["Predicted approval rate_Model2"] * 100
 
 comparison_show["Predicted approval rate_Model1"] = comparison_show["Predicted approval rate_Model1"].round(2)
 comparison_show["Predicted approval rate_Model2"] = comparison_show["Predicted approval rate_Model2"].round(2)
 comparison_show["Difference_percentage_points"] = comparison_show["Difference_percentage_points"].round(2)
+comparison_show["Dynamic_threshold_pp"] = comparison_show["Dynamic_threshold_pp"].round(2)
 
 comparison_show = comparison_show.rename(
     columns={
         "Predicted approval rate_Model1": "Model 1 approval rate (%)",
         "Predicted approval rate_Model2": "Model 2 approval rate (%)",
-        "Difference_percentage_points": "Difference (percentage points)"
+        "Difference_percentage_points": "Difference (percentage points)",
+        "Dynamic_threshold_pp": "Dynamic threshold (pp)",
+        "Bias_flag": "Bias result"
     }
 )
 
@@ -866,11 +923,24 @@ comparison_show = comparison_show[
         "Category",
         "Model 1 approval rate (%)",
         "Model 2 approval rate (%)",
-        "Difference (percentage points)"
+        "Difference (percentage points)",
+        "Dynamic threshold (pp)",
+        "Bias result"
     ]
 ]
 
 show_bias_metrics(comparison)
+st.subheader("Overall bias decision")
+
+if "Biased" in comparison["Bias_flag"].values:
+    overall_result = "BIASED"
+    st.error(f"Overall result: {overall_result}")
+elif "Borderline" in comparison["Bias_flag"].values:
+    overall_result = "BORDERLINE"
+    st.warning(f"Overall result: {overall_result}")
+else:
+    overall_result = "NOT BIASED"
+    st.success(f"Overall result: {overall_result}")
 show_table(comparison_show)
 
 plot_model_comparison(bias_df_1, bias_df_2, bias_calculator)

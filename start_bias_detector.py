@@ -1070,8 +1070,54 @@ comparison_show = comparison_show[
     ]
 ]
 
+# show_bias_metrics(comparison)
+# st.subheader("Overall bias decision")
+
+# ____________________
+# Representation bias warning
+st.subheader("Dataset representation check")
+total_rows = len(original_rows)
+for _, row in bias_df_1.iterrows():
+    group = str(row["Category"])
+    size = int(row["Group size"])
+    pct = size / total_rows * 100
+    if pct < 25:
+        st.warning(
+            f"Group '{group}' has only {size} samples "
+            f"({pct:.1f}% of dataset). "
+            f"Predictions for this group may be less reliable "
+            f"due to underrepresentation in training data."
+        )
+
+# Dominant feature warning (numeric features only)
+try:
+    numeric_features = ["Credit_History", "ApplicantIncome", 
+                       "CoapplicantIncome", "LoanAmount", 
+                       "Loan_Amount_Term"]
+    
+    params = model_1.params
+    available = [f for f in numeric_features if f in params.index]
+    
+    if available:
+        numeric_params = params[available].abs()
+        total = numeric_params.sum()
+        if total > 0:
+            dominance = numeric_params.max() / total
+            top_feature = numeric_params.idxmax()
+            if dominance > 0.6:
+                st.warning(
+                    f"'{top_feature}' has {dominance*100:.0f}x more influence "
+                    f"on loan decisions than all other numeric features combined. "
+                    f"When one factor dominates like this, bias from other "
+                    f"sources may go undetected."
+                )
+except Exception:
+    pass
+# ____________________
+
 show_bias_metrics(comparison)
 st.subheader("Overall bias decision")
+
 
 if "Biased" in comparison["Bias_flag"].values:
     overall_result = "BIASED"

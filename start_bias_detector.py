@@ -4,6 +4,141 @@ import numpy as np
 import statsmodels.api as sm
 import plotly.express as px
 
+st.set_page_config(
+    page_title="BiasAI Dashboard",
+    layout="wide"
+)
+
+st.markdown("""
+<style>
+/* Global app background */
+.stApp {
+    background: linear-gradient(180deg, #f8fafc 0%, #eef4f8 100%);
+    color: #1f2937;
+}
+
+/* Main container */
+.block-container {
+    padding-top: 2rem;
+    padding-bottom: 2rem;
+}
+
+/* Headings */
+h1, h2, h3 {
+    color: #16324f;
+    font-weight: 700;
+}
+
+h1 {
+    letter-spacing: -0.02em;
+}
+
+/* Sidebar */
+section[data-testid="stSidebar"] {
+    background: #eaf1f7;
+    border-right: 1px solid #d6e2ee;
+}
+
+section[data-testid="stSidebar"] h1,
+section[data-testid="stSidebar"] h2,
+section[data-testid="stSidebar"] h3,
+section[data-testid="stSidebar"] label,
+section[data-testid="stSidebar"] p,
+section[data-testid="stSidebar"] span {
+    color: #243b53 !important;
+}
+
+/* File uploader */
+section[data-testid="stSidebar"] div[data-testid="stFileUploader"] {
+    background: #f8fbff;
+    border: 1px solid #c9d8e6;
+    border-radius: 12px;
+    padding: 0.5rem;
+}
+
+/* Inputs */
+.stSelectbox > div > div,
+.stMultiSelect > div > div {
+    border-radius: 10px !important;
+}
+
+/* Improve selected items in multiselect */
+[data-baseweb="tag"] {
+    background-color: #dbeafe !important;
+    border-radius: 999px !important;
+    border: 1px solid #93c5fd !important;
+}
+
+[data-baseweb="tag"] span {
+    color: #1e3a8a !important;
+    font-weight: 500;
+}
+
+/* Dropdown selected / highlighted rows */
+div[role="listbox"] ul li[aria-selected="true"] {
+    background-color: #e0f2fe !important;
+    color: #0f172a !important;
+}
+
+/* Buttons */
+.stButton > button {
+    background: #2b6cb0;
+    color: white;
+    border: none;
+    border-radius: 10px;
+    padding: 0.5rem 1rem;
+    font-weight: 600;
+}
+
+.stButton > button:hover {
+    background: #1d4f91;
+    color: white;
+}
+
+/* Metrics */
+div[data-testid="metric-container"] {
+    background: #ffffff;
+    border: 1px solid #d9e4ec;
+    padding: 1rem;
+    border-radius: 14px;
+    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.05);
+}
+
+/* Dataframes / tables */
+div[data-testid="stDataFrame"] {
+    background: white;
+    border-radius: 12px;
+    border: 1px solid #dbe4ea;
+    padding: 0.25rem;
+}
+
+/* Expander */
+details {
+    background: #ffffff;
+    border: 1px solid #dbe4ea;
+    border-radius: 12px;
+    padding: 0.4rem 0.8rem;
+}
+
+/* Info / warning / error boxes softer */
+div[data-baseweb="notification"] {
+    border-radius: 12px !important;
+}
+
+/* Small captions */
+.stCaption {
+    color: #52667a !important;
+}
+
+/* Horizontal spacing between sections */
+hr {
+    border: none;
+    border-top: 1px solid #dbe4ea;
+    margin: 1.5rem 0;
+}
+</style>
+""", unsafe_allow_html=True)
+
 st.set_page_config(layout="wide")
 st.header("Bias analysis - Loan dataset")
 
@@ -477,7 +612,8 @@ def plot_approval_rate(bias_df, title, bias_col, model_name):
         y="Predicted approval rate percentage",
         text="Predicted approval rate percentage",
         title=title,
-        template="plotly_dark"
+        template="simple_white",
+        color_discrete_sequence=["#4C78A8"]
     )
 
     fig.update_traces(
@@ -530,7 +666,11 @@ def plot_model_comparison(bias_df_1, bias_df_2, bias_col):
         barmode="group",
         text="Predicted approval rate percentage",
         title="Predicted approval rate by group",
-        template="plotly_dark"
+        template="simple_white",
+        color_discrete_map={
+        "Model 1 - All features": "#4C78A8",
+        "Model 2 - Essential features": "#72B7B2"
+    }
     )
 
     fig.update_traces(
@@ -580,7 +720,8 @@ def plot_difference(comparison, bias_col):
         y="Difference_percentage_points",
         text="Difference label",
         title="Prediction shift: Model 1 compared to Model 2",
-        template="plotly_dark"
+        template="simple_white",
+        color_discrete_sequence=["#577590"]
     )
 
     fig.update_traces(

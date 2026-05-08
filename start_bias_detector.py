@@ -1087,6 +1087,67 @@ show_table(comparison_show)
 plot_model_comparison(bias_df_1, bias_df_2, bias_calculator)
 plot_difference(comparison, bias_calculator)
 
+# Explanation table for biased columns
+st.subheader("Ethical explanation")
+
+ethical_explanations = {
+    "Gender": {
+        "why": "Gender shouldn't determine whether someone gets a loan. When a model learns from historical data where women were approved less often, it just repeats that unfairness — even if it's not intentional. Over time this limits women's access to credit and financial independence.",
+        "prevent": "Remove gender from the model. Loan decisions should be based on financial factors like income and credit history, not who the person is."
+    },
+    "Married": {
+        "why": "Whether someone is married has nothing to do with their ability to repay a loan. Using it can quietly disadvantage single parents, divorced people, or anyone whose household looks 'non-traditional' to the model.",
+        "prevent": "Leave marital status out of the model. If household finances matter, use actual income and expense data instead."
+    },
+    "Dependents": {
+        "why": "Having children or dependents doesn't make someone a financial risk. But models often treat it that way, which ends up penalizing single parents and caregivers — most of whom are women.",
+        "prevent": "Don't use number of dependents as a feature. Stick to actual financial behavior data."
+    },
+    "Education": {
+        "why": "Not everyone has equal access to higher education — it often comes down to money and opportunity, not ability. Using education level in a loan model punishes people for circumstances they didn't choose.",
+        "prevent": "Use financial track record instead. Someone's ability to repay a loan is better measured by their income and credit history than their degree."
+    },
+    "Self_Employed": {
+        "why": "Being self-employed doesn't mean being financially unstable — but models often read irregular income patterns as risky. This puts freelancers and small business owners at an unfair disadvantage.",
+        "prevent": "Look at income consistency over time rather than just employment type. A stable freelancer is not riskier than a salaried employee."
+    },
+    "Property_Area": {
+        "why": "Using location to predict loan approval is a form of redlining — a practice where people in certain neighborhoods, often poorer or minority communities, are systematically denied credit. The area someone lives in shouldn't define their creditworthiness.",
+        "prevent": "Avoid using location as a stand-in for financial risk. If property value is relevant, use actual valuations rather than area labels."
+    }
+}
+
+biased_categories = comparison[comparison["Bias_flag"] == "Biased"]["Category"].tolist()
+borderline_categories = comparison[comparison["Bias_flag"] == "Borderline"]["Category"].tolist()
+
+biased_cols = [col for col in ethical_explanations.keys() if col == bias_calculator and (biased_categories or borderline_categories)]
+
+if not biased_cols:
+    st.success("No ethical concerns detected for the selected bias column based on the current results.")
+else:
+    for col in biased_cols:
+        explanation = ethical_explanations[col]
+
+        with st.expander(f" {col} — Ethical concern detected"):
+            st.markdown("**Why this is a problem:**")
+            st.write(explanation["why"])
+            st.markdown("**How to prevent it:**")
+            st.write(explanation["prevent"])
+
+            if biased_categories:
+                st.markdown("**Affected groups:**")
+                for group in biased_categories:
+                    row = comparison[comparison["Category"] == group].iloc[0]
+                    diff = row["Difference_percentage_points"]
+                    st.write(f"• {group}: {diff:+.2f} pp shift when sensitive column is included")
+
+            if borderline_categories:
+                st.markdown("**Borderline groups (monitor closely):**")
+                for group in borderline_categories:
+                    row = comparison[comparison["Category"] == group].iloc[0]
+                    diff = row["Difference_percentage_points"]
+                    st.write(f"• {group}: {diff:+.2f} pp shift — close to bias threshold")
+
 
 # Clear explanation under the full section
 st.subheader("What the comparison means")
